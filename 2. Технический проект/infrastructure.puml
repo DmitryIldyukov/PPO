@@ -1,0 +1,80 @@
+@startuml
+!define C4P https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master
+!includeurl C4P/C4_Container.puml
+
+title C4 Infrastructure Diagram - Сервис аренды транспортных средств
+
+package "Облачная инфраструктура" as cloud {
+    Container(nginx, "Nginx", "Nginx", "Обратный прокси и балансировщик нагрузки")
+
+    package "Kubernetes Cluster" as k8s_cluster {
+        package "Auth Pod" as auth_pod {
+            Container(auth_service, "Auth Service", ".NET 8", "Управление регистрацией и аутентификацией")
+        }
+
+        package "Notification Pod" as notification_pod {
+            Container(notification_service, "Notification Service", ".NET 8", "Управление уведомлениями")
+        }
+
+        package "Review Pod" as review_pod {
+            Container(review_service, "Review Service", ".NET 8", "Управление отзывами и рейтингами")
+        }
+
+        package "Vehicle Pod" as vehicle_pod {
+            Container(vehicle_service, "Vehicle Management Service", ".NET 8", "Управление транспортными средствами")
+        }
+
+        package "Booking Pod" as booking_pod {
+            Container(booking_service, "Booking Management Service", ".NET 8", "Управление бронированиями")
+        }
+
+        package "User Profile Pod" as user_profile_pod {
+            Container(user_profile_service, "User Profile Service", ".NET 8", "Управление профилями пользователей")
+        }
+
+        package "Payment Pod" as payment_pod {
+            Container(payment_service, "Payment Service", ".NET 8", "Управление платежами")
+        }
+    }
+
+    Container(messageBroker, "Брокер сообщений", "RabbitMQ", "Асинхронная обработка событий между сервисами")
+}
+
+package "Database Cluster" as database {
+    Container(db_auth, "Auth Database", "PostgreSQL", "Хранение данных пользователей и аутентификации")
+    Container(db_notification, "Notification Database", "PostgreSQL", "Хранение данных уведомлений")
+    Container(db_review, "Review Database", "PostgreSQL", "Хранение данных отзывов")
+    Container(db_vehicle, "Vehicle Database", "PostgreSQL", "Хранение данных транспортных средств")
+    Container(db_booking, "Booking Database", "PostgreSQL", "Хранение данных бронирований")
+    Container(db_user_profile, "User Profile Database", "PostgreSQL", "Хранение данных профилей пользователей")
+    Container(db_payment, "Payment Database", "PostgreSQL", "Хранение данных платежей")
+}
+
+package "Кеширование" as cache {
+    Container(redis_vehicle, "Vehicle Cache", "Redis", "Кэш данных транспортных средств")
+    Container(redis_booking, "Booking Cache", "Redis", "Кэш данных бронирований")
+    Container(redis_review, "Review Cache", "Redis", "Кэш данных отзывов")
+}
+
+System_Ext(email_service, "Почтовый сервис", "Отправка уведомлений")
+System_Ext(payment_system, "Платежная система", "Обработка платежей")
+System_Ext(map_service, "Сервис карт", "Геолокация и маршруты")
+
+Rel(nginx, k8s_cluster, "Проксирование запросов", "HTTP/S")
+
+Rel(vehicle_pod, redis_vehicle, "Кэширование данных", "Redis API")
+Rel(booking_pod, redis_booking, "Кэширование данных", "Redis API")
+Rel(review_pod, redis_review, "Кэширование данных", "Redis API")
+
+Rel(k8s_cluster, messageBroker, "Публикация/подписка на события")
+
+Rel(k8s_cluster, database, "Чтение/Запись", "SQL")
+
+Rel(notification_service, email_service, "Отправка уведомлений", "SMTP")
+Rel(payment_service, payment_system, "Обработка платежей", "REST API")
+Rel(vehicle_service, map_service, "Геолокация и маршруты", "REST API")
+
+k8s_cluster ---[hidden]---> database
+k8s_cluster ---[hidden]---> cache
+
+@enduml

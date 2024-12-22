@@ -1,0 +1,26 @@
+@startuml Диаграмма контекста
+title "C4. Контекст"
+
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+!$ICONURL = "https://raw.githubusercontent.com/tupadr3/plantuml-icon-font-sprites/v3.0.0/icons"
+!include $ICONURL/common.puml
+
+Person(renter, "Арендатор", " Поиск подходящего транспортного средства, оформление аренды, оплата услуги, оставление отзывов.")
+Person(provider, "Поставщик транспорта", "Размещение своих транспортных средств на платформе, установка цен и условий аренды, управление бронированиями, получение отзывов от арендаторов.")
+Person(admin, "Администратор", "Модерация содержимого, управление учетными записями поставщиков, финансовые и статистические операции.")
+
+System(currencyExchangeService, "Система аренды транспортных средств")
+
+System_Ext(email, "Почтовый сервис", "Отправка уведомлений пользователям")
+System_Ext(paymentSystem, "Платежная система", "Осуществление платежей")
+System_Ext(map, "Сервис карт", "Получение координат, маршрутов и т.п.")
+
+Rel(renter, currencyExchangeService, "Запросы на аренду т.с.")
+Rel(provider, currencyExchangeService, "Запросы на добавление т.с.")
+Rel(admin, currencyExchangeService, "Управление уч. записями")
+Rel(currencyExchangeService, email, "Отправка уведомлений")
+Rel(currencyExchangeService, paymentSystem, "Обработка платежей")
+Rel(currencyExchangeService, map, "Получание координат и маршрутов")
+
+
+@enduml

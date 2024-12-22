@@ -1,0 +1,93 @@
+@startuml Диаграмма контейнеров
+title "C4. Контейнеры - Сервис для аренды транспортных средств"
+
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+!$ICONURL = "https://raw.githubusercontent.com/tupadr3/plantuml-icon-font-sprites/v3.0.0/icons"
+!include $ICONURL/devicons/react.puml
+!include $ICONURL/devicons/dotnet.puml
+!include $ICONURL/devicons/postgresql.puml
+!include $ICONURL/devicons/redis.puml
+
+Person(admin, "Администратор", "Модерация контента, управление пользователями и статистикой")
+Person(renter, "Арендатор", "Поиск и аренда транспортных средств, управление бронированиями")
+Person(provider, "Поставщик транспорта", "Добавление транспортных средств, управление условиями аренды и бронированиями")
+
+System_Boundary(rentService, "Сервис аренды транспортных средств") {
+    Container(webApp, "Веб-приложение", "React", "Интерфейс для арендаторов, поставщиков и администрации", $sprite="react")
+    Container(mobileApp, "Мобильное приложение", "React Native", "Интерфейс для арендаторов и поставщиков", $sprite="react")
+    Container(apiGateway, "API Gateway", "Nginx", "Шлюз для управления API вызовами")
+
+    Container(authService, "Сервис авторизации", ".NET 8", "Управление регистрацией и аутентификацией пользователей", $sprite="dotnet")
+    Container(notificationService, "Сервис уведомлений", ".NET 8", "Отправка уведомлений и оповещений", $sprite="dotnet")
+    Container(reviewService, "Сервис отзывов", ".NET 8", "Управление отзывами и рейтингами", $sprite="dotnet")
+    Container(vehicleManagementService, "Сервис управления транспортом", ".NET 8", "Операции по добавлению, редактированию и удалению транспортных средств", $sprite="dotnet")
+    Container(bookingManagementService, "Сервис управления бронированиями", ".NET 8", "Управление процессом аренды, включая создание, изменение и отмену бронирования", $sprite="dotnet")
+    Container(userProfileService, "Сервис управления пользователями и профилями", ".NET 8", "Управление профилями арендаторов и поставщиков", $sprite="dotnet")
+    Container(paymentService, "Платежный сервис", ".NET 8", "Управление платежами", $sprite="dotnet")
+
+    Container(messageBus, "Шина сообщений", "RabbitMQ", "Асинхронный обмен сообщениями между сервисами")
+
+    Container(vehicleRedisCache, "Кеширование данных", "redis", "Кэширование данных для ускорения доступа", $sprite="redis")
+    Container(reviewRedisCache, "Кеширование данных", "redis", "Кэширование данных для ускорения доступа", $sprite="redis")
+    Container(bookingRedisCache, "Кеширование данных", "Redis", "Кэширование данных для ускорения доступа", $sprite="redis")
+
+    Container(dbAuth, "Бд авторизации", "PostgreSQL", "Хранение данных пользователей и аутентификации", $sprite="postgresql")
+    Container(dbNotification, "Бд уведомлений", "PostgreSQL", "Хранение данных об уведомлениях", $sprite="postgresql")
+    Container(dbReview, "Бд отзывов", "PostgreSQL", "Хранение данных отзывов и рейтингов", $sprite="postgresql")
+    Container(dbVehicleManagement, "Бд т.с.", "PostgreSQL", "Хранение данных о т.с.", $sprite="postgresql")
+    Container(dbBookingManagement, "Бд бронирований", "PostgreSQL", "Хранение данных бронирований", $sprite="postgresql")
+    Container(dbUserProfile, "Бд профилей", "PostgreSQL", "Хранение данных пользователей и профилей", $sprite="postgresql")
+    Container(dbPayment, "Бд платежей", "PostgreSQL", "Хранение данных о платежных транзакциях", $sprite="postgresql")
+}
+
+System_Ext(email, "Почтовый сервис", "Отправка уведомлений пользователям")
+System_Ext(paymentSystem, "Платежная система", "Осуществление платежей")
+System_Ext(map, "Сервис карт", "Получение координат, маршрутов и т.п.")
+
+renter --> mobileApp : "Посещает\nHTTP/TCP"
+provider --> mobileApp: "Посещает\nHTTP/TCP"
+mobileApp --> apiGateway : "API вызовы\nHTTPS/REST"
+
+renter --> webApp : "Посещает\nHTTP/TCP"
+provider --> webApp: "Посещает\nHTTP/TCP"
+admin --> webApp : "Посещает\nHTTP/TCP"
+webApp --> apiGateway : "API вызовы\nHTTPS/REST"
+
+apiGateway --> authService : "API вызовы\nHTTPS/REST"
+apiGateway --> notificationService : "API вызовы\nHTTPS/REST"
+apiGateway --> reviewService : "API вызовы\nHTTPS/REST"
+apiGateway --> vehicleManagementService : "API вызовы\nHTTPS/REST"
+apiGateway --> bookingManagementService : "API вызовы\nHTTPS/REST"
+apiGateway --> userProfileService : "API вызовы\nHTTPS/REST"
+apiGateway --> paymentService : "API вызовы\nHTTPS/REST"
+
+authService --> dbAuth : "Чтение/запись\nSQL"
+notificationService --> dbNotification : "Чтение/запись\nSQL"
+reviewService --> dbReview : "Чтение/запись\nSQL"
+vehicleManagementService --> dbVehicleManagement : "Чтение/запись\nSQL"
+bookingManagementService --> dbBookingManagement : "Чтение/запись\nSQL"
+userProfileService --> dbUserProfile : "Чтение/запись\nSQL"
+paymentService --> dbPayment : "Чтение/запись\nSQL"
+
+authService ---> messageBus : "Публикует/подписывается на события\nAMQP"
+notificationService ---> messageBus : "Публикует/подписывается на события\nAMQP"
+reviewService ---> messageBus : "Публикует/подписывается на события\nAMQP"
+vehicleManagementService ---> messageBus : "Публикует/подписывается на события\nAMQP"
+bookingManagementService ---> messageBus : "Публикует/подписывается на события\nAMQP"
+userProfileService ---> messageBus : "Публикует/подписывается на события\nAMQP"
+paymentService ---> messageBus : "Публикует/подписывается на события\nAMQP"
+
+
+vehicleManagementService --> vehicleRedisCache : "Чтение/запись данных\nдля кэширования"
+bookingManagementService --> bookingRedisCache : "Чтение/запись данных\nдля кэширования"
+reviewService --> reviewRedisCache : "Чтение/запись данных\nдля кэширования"
+
+bookingManagementService ----> map : "Получение координат, построение маршрутов."
+webApp ----> map : "Получение координат, маршрутов и т.п."
+mobileApp ----> map : "Получение координат, маршрутов и т.п."
+
+notificationService ----> email : "Отправка уведомления"
+
+paymentService ----> paymentSystem : "Отправка транзаций"
+
+@enduml

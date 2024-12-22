@@ -1,0 +1,38 @@
+@startuml API. Диаграмма компонентов
+title "C4. Компоненты"
+
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+!$ICONURL = "https://raw.githubusercontent.com/tupadr3/plantuml-icon-font-sprites/v3.0.0/icons"
+!include $ICONURL/common.puml
+
+Component(dbVehicleManagement, "Бд т.с.", "PostgreSQL", "Хранение данных о т.с.", $sprite="postgresql")
+
+Component(gateway, "ApiGateway")
+Component(messageBus, "Шина сообщений", "RabbitMQ", "Асинхронный обмен сообщениями между сервисами")
+Component(redisCache, "Redis", "Кэш", "Кэширование данных для ускорения доступа", $sprite="redis")
+
+System_Ext(map, "Сервис карт", "Получение координат, маршрутов и т.п.")
+
+Container_Boundary(API, "Booking API") {
+  Component(bookingController, "Booking Controller", "ASP.NET Core", "Обработка входящих запросов")
+  Component(bookingService, "Booking Service", "C#", "Бизнес логика")
+  Component(bookingRepository, "Booking Repository", "C#", "Работа с бд")
+  Component(bookingEntity, "Booking entity", "C#", "Хранение в бд")
+  Component(messageService, "Event Publisher", "C#", "Работа с Message Bus")
+  Component(cacheService, "Cache Service", "C#", "Работа с Redis")
+  bookingService --> messageService : "Работа с Message Bus"
+  bookingController --> bookingService : "Обработка запросов"
+  bookingService --> bookingRepository : "Запросы к данным"
+  bookingService --> cacheService : "Работа с Redis"
+  bookingRepository --> bookingEntity : Работа с данными
+}
+
+gateway --> bookingController : "Отправляет HTTP-запросы"
+
+bookingRepository --> dbVehicleManagement : "Запись/чтение данных с использованием ORM EF CORE"
+messageService ----> messageBus : "Отправка и подписка на события"
+cacheService --> redisCache : "Запись/чтение данных"
+
+bookingService --> map : "Получение координат и построение маршрута"
+
+@enduml
